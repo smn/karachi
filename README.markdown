@@ -1,3 +1,5 @@
+Originally developed for Fabric 0.1 but somewhat ported over to 1.0a. Still needs some love even though it is slightly usable.
+
 usage: fab `environment` `command`
 
 **fab development setup**
