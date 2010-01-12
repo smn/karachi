@@ -1,51 +1,56 @@
+from datetime import datetime
+from fabric.api import env
+from helpers import (_helpers_setup, _helpers_checkout, _helpers_symlink,
+                        _rollback, _helpers_cleanup, _helpers_releases)
+
 def test():
-    set(fab_hosts = ["ubuntumini.local"])
+    env.hosts = ["testing.server"]
 
 
 def development():
-    set(fab_hosts = ["ubuntumini.local"])
+    env.hosts = ["development.server"]
 
 
 def production():
-    set(fab_hosts = ["ubuntumini.local"])
+    env.hosts = ["production.server"]
 
 
-set(
-    project = 'fajango',
-    fab_user = "deployer",
-    deploy_to = "/home/deployer/fajango",
-    release_name = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S'),
-    repository = "http://kathmandu.googlecode.com/svn/trunk/",
-    revision = "HEAD"
-)
-
-
-class Fajango:
-
-    INITIAL_DIRS = [
-        "$(deploy_to)/releases",
-        "$(deploy_to)/shared",
-        "$(deploy_to)/shared/logs",
-        "$(deploy_to)/shared/tmp",
-    ]
+def _defaults():
+    env.project = 'txtalert'
+    env.user = "sdehaan"
+    env.deploy_to = "/home/sdehaan/development/fabric/txtalert"
     
-    @staticmethod
-    def setup():
-        "Setup the directory layout for the application to be deployed"
-        require("fab_hosts", provided_by = [test, development, production])
-        run("mkdir -p %s" % " ".join(Fajango.INITIAL_DIRS))
+    env.repository = "git://github.com/smn/txtalert.git"
+    env.branch = "master"
     
-
-    @staticmethod
-    def checkout():
-        "Checkout the SVN repository"
-        require("fab_hosts", provided_by = [test, development, production])
-        run("svn co -r $(revision) $(repository) $(deploy_to)/releases/$(release_name)")
+    env.release_name = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    env.releases_path = "%(deploy_to)s/releases" % env
+    env.current_release = "%(releases_path)s/%(release_name)s" % env
     
+    env.current_path = "%(deploy_to)s/current" % env
+    env.shared_path = "%(deploy_to)s/shared" % env
 
+
+def setup():
+    "Create the necessary directory layout for a deploy"
+    _defaults()
+    _helpers_setup()
 
 def deploy():
-    "Build the project and deploy it to a specified environment"
-    require("fab_hosts", provided_by = [test, development, production])
-    Fajango.setup()
-    Fajango.checkout()
+    try: 
+        "Build the project and deploy it to a specified environment"
+        _defaults()
+        _helpers_setup()
+        _helpers_checkout()
+        _helpers_symlink()
+    except Exception, e:
+        print e
+        _rollback()
+
+def cleanup():
+    _defaults()
+    _helpers_cleanup()
+
+def releases():
+    _defaults()
+    _helpers_releases()
