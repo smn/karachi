@@ -12,8 +12,11 @@ def development():
     env.fcgi_host = '127.0.0.1'
     env.fcgi_port = '9991'
     env.fcgi_protocol = 'fcgi'
-    env.fcgi_pidfile = '/var/run/django/txtalert_dev.pid'
-    env.django_settings = 'environments.development'
+    env.fcgi_pidfile = '/home/sdehaan/development/fabric/txtalert/current/txtalert/tmp/txtalert_dev.pid'
+    env.fcgi_outlog = '/home/sdehaan/development/fabric/txtalert/current/txtalert/logs/fcgi.log'
+    env.fcgi_errlog = '/home/sdehaan/development/fabric/txtalert/current/txtalert/logs/fcgi-err.log'
+    env.fcgi_debug = 'true'
+    env.django_settings = 'environments.live.development'
 
 def production():
     env.hosts = ["production.server"]
@@ -45,24 +48,40 @@ def deploy():
         _defaults()
         helpers.setup()
         helpers.checkout()
-        helpers.symlink()
+        helpers.copy_settings_files()
+        # run_tests()
+        helpers.symlink_current()
+        helpers.symlink_tmp()
+        helpers.symlink_logs()
     except Exception, e:
         print e
-        _rollback()
+        helpers.rollback()
 
 def start_django():
     helpers.staging()
     _defaults()
-    run('python %(current_path)s/manage.py '
+    run('python %(current_path)s/%(project)s/manage.py '
             'runfcgi --settings=%(django_settings)s host=%(fcgi_host)s '
             'port=%(fcgi_port)s protocol=%(fcgi_protocol)s '
+            'outlog=%(fcgi_outlog)s '
+            'errlog=%(fcgi_errlog)s '
+            'debug=%(fcgi_debug)s '
             'pidfile=%(fcgi_pidfile)s' % env)
 
 
 def stop_django():
-    _defaults()
     helpers.staging()
-    run('kill -HUP `cat %(fcgi_pidfile)s`' % env)
+    _defaults()
+    run('if [ -f %(fcgi_pidfile)s ]; then kill -HUP `cat %(fcgi_pidfile)s`; fi' % env)
+
+def restart_django():
+    stop_django()
+    start_django()
+
+def run_tests():
+    run("python %(current_release)s/%(project)s/manage.py test --settings=environments.live.testing" % env)
+
+
 
 def cleanup():
     _defaults()
