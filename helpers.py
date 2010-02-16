@@ -24,7 +24,7 @@ def setup():
         "%(shared_path)s/tmp" % env,
         "%(shared_path)s/repositories" % env,
     ])
-    run(cmd % env)
+    sudo(cmd % env, user=env.sudo_user)
 
 def get_previous_release():
     if 'previous_release' not in env:
@@ -43,7 +43,7 @@ def get_previous_release():
 # 
 
 def checkout():
-    add_rollback(lambda: run("rm -rf %(current_release)s" % env))
+    add_rollback(lambda: sudo("rm -rf %(current_release)s" % env, user=env.sudo_user))
     staging()
     # run a check to see if we've already got a repository checked out
     cold_check = run("if [ -d %(shared_path)s/repositories/%(project)s ]; then "
@@ -53,56 +53,73 @@ def checkout():
     # if it's a cold start then checkout the full repository and switch to the 
     # deploy branch
     if cold_check == "cold":
-        run("git clone %(repository)s %(shared_path)s/repositories/%(project)s" % env)
+        sudo("git clone %(repository)s %(shared_path)s/repositories/%(project)s" % env, user=env.sudo_user)
     
     # update the now warm repository to the latest code
     with cd("%(shared_path)s/repositories/%(project)s" % env):
-        run("git pull")
+        sudo("git pull", user=env.sudo_user)
     
     # create the release path
-    run("mkdir -p %(current_release)s/%(project)s" % env)
+    sudo("mkdir -p %(current_release)s/%(project)s" % env, user=env.sudo_user)
     # copy it to the current release path
-    run("cp -RPp %(shared_path)s/repositories/%(project)s %(current_release)s/" % env)
+    sudo("cp -RPp %(shared_path)s/repositories/%(project)s %(current_release)s/" % env, user=env.sudo_user)
     with cd("%(current_release)s/%(project)s" % env):
-        run("git checkout -b deploy origin/%(branch)s" % env)
-        run("echo %(branch)s >> BRANCH" % env)
-        run("echo `git rev-list --max-count=1 deploy` >> REVISION" % env)
+        sudo("git checkout -b deploy origin/%(branch)s" % env, user=env.sudo_user)
+        sudo("echo %(branch)s >> BRANCH" % env, user=env.sudo_user)
+        sudo("echo `git rev-list --max-count=1 deploy` >> REVISION" % env, user=env.sudo_user)
 
 def copy_settings_files():
-    add_rollback(lambda: run("rm -rf %(current_release)s" % env))
+    add_rollback(lambda: sudo("rm -rf %(current_release)s" % env, user=env.sudo_user))
     staging()
+    run("mkdir -p ~/fabrictmp")
     put(
         "~/Documents/Repositories/txtalert/environments/live/%(branch)s.py" % env,
-        "%(current_release)s/%(project)s/environments/live/%(branch)s.py" % env
+        "~/fabrictmp/%(branch)s.py" % env
+    )
+    sudo(
+        "cp ~/fabrictmp/%(branch)s.py "
+        "%(current_release)s/%(project)s/environments/live/%(branch)s.py" % env, 
+        user=env.sudo_user
     )
     put(
-        "~/Documents/Repositories/txtalert/environments/live/testing.py" % env,
-        "%(current_release)s/%(project)s/environments/live/testing.py" % env
+        "~/Documents/Repositories/txtalert/environments/live/testing.py",
+        "~/fabrictmp/testing.py"
     )
+    sudo(
+        "cp ~/fabrictmp/testing.py "
+        "%(current_release)s/%(project)s/environments/live/testing.py" % env,
+        user=env.sudo_user
+    )
+    run("rm ~/fabrictmp/%(branch)s.py" % env)
+    run("rm ~/fabrictmp/testing.py" % env)
+    run("rmdir ~/fabrictmp")
+    
+    
+    
 
 
 def symlink_current():
     "Symlink `current` to the latest release"
     get_previous_release()
-    add_rollback(lambda: run("rm -f %(current_path)s && ln -s %(previous_release)s %(current_path)s" % env))
+    add_rollback(lambda: sudo("rm -f %(current_path)s && ln -s %(previous_release)s %(current_path)s" % env, user=env.sudo_user))
     staging()
-    run("rm -f %(current_path)s && ln -s %(current_release)s %(current_path)s" % env)
+    sudo("rm -f %(current_path)s && ln -s %(current_release)s %(current_path)s" % env, user=env.sudo_user)
 
 
 def symlink_tmp():
     staging()
-    run("rm -rf %(current_release)s/%(project)s/tmp && ln -s %(shared_path)s/tmp %(current_release)s/%(project)s/tmp" % env)
+    sudo("rm -rf %(current_release)s/%(project)s/tmp && ln -s %(shared_path)s/tmp %(current_release)s/%(project)s/tmp" % env, user=env.sudo_user)
     
 
 def symlink_logs():
     staging()
-    run("rm -rf %(current_release)s/%(project)s/logs && ln -s %(shared_path)s/logs %(current_release)s/%(project)s/logs" % env)
+    sudo("rm -rf %(current_release)s/%(project)s/logs && ln -s %(shared_path)s/logs %(current_release)s/%(project)s/logs" % env, user=env.sudo_user)
     
 
 def cleanup():
     "Cleanup old releases, keeping the last remaining 5"
     staging()
-    run("cd %(releases_path)s && ls -1 . | head --line=-5 | xargs rm -rf " % env)
+    sudo("cd %(releases_path)s && ls -1 . | head --line=-5 | xargs rm -rf " % env, user=env.sudo_user)
 
 
 def releases():
