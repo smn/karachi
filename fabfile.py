@@ -32,8 +32,8 @@ def _defaults():
     env.fcgi_host = '127.0.0.1'
     env.fcgi_protocol = 'fcgi'
     env.fcgi_pidfile = '%(deploy_to)s/current/%(project)s/tmp/%(project)s_%(branch)s.pid' % env
-    env.fcgi_outlog = '%(deploy_to)s/current/%(project)s/logs/fcgi.log' % env
-    env.fcgi_errlog = '%(deploy_to)s/current/%(project)s/logs/fcgi-err.log' % env
+    env.fcgi_outlog = '%(deploy_to)s/current/%(project)s/logs/fcgi_%(branch)s.log' % env
+    env.fcgi_errlog = '%(deploy_to)s/current/%(project)s/logs/fcgi_%(branch)s_err.log' % env
     env.fcgi_debug = 'true'
     
     env.release_name = datetime.utcnow().strftime('%Y%m%d%H%M%S')
