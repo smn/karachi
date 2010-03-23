@@ -31,20 +31,10 @@ def get_previous_release():
         env.previous_release = run("ls -1 %(releases_path)s | tail -2 | head -1" % env)
     
 
-# def checkout():
-#     "Checkout the repository"
-#     add_rollback(lambda: run("rm -rf %(current_release)s" % env))
-#     staging()
-#     run("git clone %(repository)s %(current_release)s/%(project)s" % env)
-#     with cd("%(current_release)s/%(project)s" % env):
-#         # have the deploy branch track the branch specified in the config
-#         run("git checkout -b deploy origin/%(branch)s" % env)
-#         run("echo %(branch)s >> BRANCH" % env)
-# 
-
 def checkout():
     add_rollback(lambda: sudo("rm -rf %(current_release)s" % env, user=env.sudo_user))
     staging()
+    
     # run a check to see if we've already got a repository checked out
     cold_check = run("if [ -d %(shared_path)s/repositories/%(project)s ]; then "
                     "echo 'warm'; "
@@ -67,35 +57,6 @@ def checkout():
         sudo("git checkout -b deploy origin/%(branch)s" % env, user=env.sudo_user)
         sudo("echo %(branch)s >> BRANCH" % env, user=env.sudo_user)
         sudo("echo `git rev-list --max-count=1 deploy` >> REVISION" % env, user=env.sudo_user)
-
-def copy_settings_files():
-    add_rollback(lambda: sudo("rm -rf %(current_release)s" % env, user=env.sudo_user))
-    staging()
-    run("mkdir -p ~/fabrictmp")
-    put(
-        "~/Documents/Repositories/txtalert/environments/live/%(branch)s.py" % env,
-        "~/fabrictmp/%(branch)s.py" % env
-    )
-    sudo(
-        "cp ~/fabrictmp/%(branch)s.py "
-        "%(current_release)s/%(project)s/environments/live/%(branch)s.py" % env, 
-        user=env.sudo_user
-    )
-    put(
-        "~/Documents/Repositories/txtalert/environments/live/testing.py",
-        "~/fabrictmp/testing.py"
-    )
-    sudo(
-        "cp ~/fabrictmp/testing.py "
-        "%(current_release)s/%(project)s/environments/live/testing.py" % env,
-        user=env.sudo_user
-    )
-    run("rm ~/fabrictmp/%(branch)s.py" % env)
-    run("rm ~/fabrictmp/testing.py" % env)
-    run("rmdir ~/fabrictmp")
-    
-    
-    
 
 
 def symlink_current():
@@ -125,5 +86,5 @@ def cleanup():
 def releases():
     "Get a list of all the deployed releases"
     staging()
-    run("ls -x %(releases_path)s" % env)
+    return sudo("ls -x %(releases_path)s" % env, user=env.sudo_user).split()
 
