@@ -3,6 +3,8 @@ from __future__ import with_statement
 from datetime import datetime
 from fabric.api import *
 import helpers
+import git
+import logging
 
 def test():
     env.hosts = ["testing.server"]
@@ -54,19 +56,19 @@ def deploy():
     try: 
         "Build the project and deploy it to a specified environment"
         helpers.setup()
-        helpers.checkout()
+        git.checkout_code()
         copy_settings_files()
-        # run_tests()
         helpers.symlink_current()
         helpers.symlink_tmp()
         helpers.symlink_logs()
     except Exception, e:
-        print e
+        logging.exception(e)
+        print "rolling back all sorts of stuff now..."
         helpers.rollback()
 
 
-def start_django():
-    helpers.staging()
+def start():
+    helpers.check_minimum_requirements()
     sudo('python %(current_path)s/%(project)s/manage.py '
             'runfcgi --settings=%(django_settings)s host=%(fcgi_host)s '
             'port=%(fcgi_port)s protocol=%(fcgi_protocol)s '
@@ -76,21 +78,24 @@ def start_django():
             'pidfile=%(fcgi_pidfile)s' % env, user=env.sudo_user)
 
 
-def stop_django():
-    helpers.staging()
+def stop():
+    helpers.check_minimum_requirements()
     sudo('if [ -f %(fcgi_pidfile)s ]; then kill -HUP `cat %(fcgi_pidfile)s`; fi' % env, user=env.sudo_user)
 
-def restart_django():
-    stop_django()
-    start_django()
+def restart():
+    stop()
+    start()
 
-def run_tests():
-    sudo("python %(current_release)s/%(project)s/manage.py test --settings=environments.live.testing" % env, user=env.sudo_user)
+def test():
+    sudo("python %(current_release)s/%(project)s/manage.py test --settings=environments.live.testing --failfast" % env, user=env.sudo_user)
 
 
 def copy_settings_files():
-    helpers.add_rollback(lambda: sudo("rm -rf %(current_release)s" % env, user=env.sudo_user))
-    helpers.staging()
+    def remove_settings_files_rollback():
+        sudo("rm -rf %(current_release)s/%(project)s/environments/live/%(branch)s.py" % env, user=env.sudo_user)
+        sudo("rm -rf %(current_release)s/%(project)s/environments/live/testing.py" % env, user=env.sudo_user)
+    helpers.add_rollback("Removing settings files", remove_settings_files_rollback)
+    helpers.check_minimum_requirements()
     run("mkdir -p ~/fabrictmp")
     put(
         "~/Documents/Repositories/txtalert/environments/live/%(branch)s.py" % env,

@@ -14,6 +14,7 @@ releases/ # timestamped releases
 shared/	# stuff that's shared between deploys
 		logs/
 		tmp/
+		repositories/
 
 current # symlinks to one of the releases
 
