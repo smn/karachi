@@ -63,9 +63,14 @@ def deploy():
         helpers.symlink_logs()
     except Exception, e:
         logging.exception(e)
-        print "rolling back all sorts of stuff now..."
         helpers.rollback()
 
+def update():
+    try:
+        git.update_code()
+    except Exception, e:
+        logging.exception(e)
+        helpers.rollback()
 
 def start():
     helpers.check_minimum_requirements()
