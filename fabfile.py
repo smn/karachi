@@ -66,11 +66,11 @@ def deploy():
         helpers.rollback()
 
 def update():
-    try:
-        git.update_code()
-    except Exception, e:
-        logging.exception(e)
-        helpers.rollback()
+    # try:
+    git.update_code()
+    # except Exception, e:
+        # logging.exception(e)
+        # helpers.rollback()
 
 def start():
     helpers.check_minimum_requirements()
@@ -96,10 +96,10 @@ def test():
 
 
 def copy_settings_files():
-    def remove_settings_files_rollback():
-        sudo("rm -rf %(current_release)s/%(project)s/environments/live/%(branch)s.py" % env, user=env.sudo_user)
-        sudo("rm -rf %(current_release)s/%(project)s/environments/live/testing.py" % env, user=env.sudo_user)
-    helpers.add_rollback("Removing settings files", remove_settings_files_rollback)
+    # def remove_settings_files_rollback():
+    #     sudo("rm -rf %(current_path)s/%(project)s/environments/live/%(branch)s.py" % env, user=env.sudo_user)
+    #     sudo("rm -rf %(current_path)s/%(project)s/environments/live/testing.py" % env, user=env.sudo_user)
+    # helpers.add_rollback("Removing settings files", remove_settings_files_rollback)
     helpers.check_minimum_requirements()
     run("mkdir -p ~/fabrictmp")
     put(
@@ -108,7 +108,7 @@ def copy_settings_files():
     )
     sudo(
         "cp ~/fabrictmp/%(branch)s.py "
-        "%(current_release)s/%(project)s/environments/live/%(branch)s.py" % env, 
+        "%(current_path)s/%(project)s/environments/live/%(branch)s.py" % env, 
         user=env.sudo_user
     )
     put(
@@ -117,7 +117,7 @@ def copy_settings_files():
     )
     sudo(
         "cp ~/fabrictmp/testing.py "
-        "%(current_release)s/%(project)s/environments/live/testing.py" % env,
+        "%(current_path)s/%(project)s/environments/live/testing.py" % env,
         user=env.sudo_user
     )
     run("rm ~/fabrictmp/%(branch)s.py" % env)

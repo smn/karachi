@@ -43,35 +43,31 @@ def checkout_code():
         sudo("git checkout -b deploy origin/%(branch)s" % env, user=env.sudo_user)
         # store the BRANCH and REVISION in a local file for future reference
         # when the shit certainly sometime will hit the fan
-        sudo("echo %(branch)s >> BRANCH" % env, user=env.sudo_user)
-        sudo("echo `git rev-list --max-count=1 deploy` >> REVISION" % env, user=env.sudo_user)
+        sudo("echo %(branch)s > BRANCH" % env, user=env.sudo_user)
+        sudo("echo `git rev-list --max-count=1 deploy` > REVISION" % env, user=env.sudo_user)
 
 
 
 def _restore_revision(revision):
-    with cd("%(current_release)s/%(project)s" % env):
+    with cd("%(current_path)s/%(project)s" % env):
         # create a new local deploy branch, tracking the development/production 
         # branches in origin
         sudo("git checkout -b deploy %s" % revision, user=env.sudo_user)
         # store the BRANCH and REVISION in a local file for future reference
         # when the shit certainly sometime will hit the fan
-        sudo("echo %(branch)s >> BRANCH" % env, user=env.sudo_user)
-        sudo("echo `git rev-list --max-count=1 deploy` >> REVISION" % env, user=env.sudo_user)
+        sudo("echo %(branch)s > BRANCH" % env, user=env.sudo_user)
+        sudo("echo `git rev-list --max-count=1 deploy` > REVISION" % env, user=env.sudo_user)
 
 def update_code():
     helpers.check_minimum_requirements()
-    env.last_deploy = helpers.releases()[-1]
-    env.last_release = "%(releases_path)s/%(last_deploy)s" % env
-    env.previous_revision = sudo("cat %(last_release)s/%(project)s/REVISION" % env, user=env.sudo_user)
+    env.previous_revision = sudo("cat %(current_path)s/%(project)s/REVISION" % env, user=env.sudo_user)
     helpers.add_rollback("Restoring to previous REVISION", lambda: _restore_revision(env.previous_revision))
     # update the now warm repository to the latest code, pointless if we've
     # just cloned
-    with cd("%(shared_path)s/repositories/%(project)s" % env):
+    with cd("%(current_path)s/%(project)s" % env):
         sudo("git pull", user=env.sudo_user)
-    
-    with cd("%(last_release)s/%(project)s" % env):
         # store the BRANCH and REVISION in a local file for future reference
         # when the shit certainly sometime will hit the fan
-        sudo("echo %(branch)s >> BRANCH" % env, user=env.sudo_user)
-        sudo("echo `git rev-list --max-count=1 deploy` >> REVISION" % env, user=env.sudo_user)
+        sudo("echo %(branch)s > BRANCH" % env, user=env.sudo_user)
+        sudo("echo `git rev-list --max-count=1 deploy` > REVISION" % env, user=env.sudo_user)
     
