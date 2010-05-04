@@ -64,6 +64,7 @@ def deploy():
 
 def update():
     try:
+        copy_settings_file("%(branch)s.py" % env)
         git.update_code()
     except Exception, e:
         logging.exception(e)
