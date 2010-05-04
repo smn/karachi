@@ -6,11 +6,6 @@ import helpers
 import git
 import logging
 
-def test():
-    env.hosts = ["testing.server"]
-    _defaults()
-
-
 def development():
     env.hosts = ["ovm1.praekelt.com"]
     env.branch = "development"
@@ -40,10 +35,8 @@ def _defaults():
     env.fcgi_errlog = '%(deploy_to)s/current/%(project)s/logs/fcgi_%(branch)s_err.log' % env
     env.fcgi_debug = 'true'
     
-    env.release_name = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    env.release_format = '%Y%m%d%H%M%S'
     env.releases_path = "%(deploy_to)s/releases" % env
-    env.current_release = "%(releases_path)s/%(release_name)s" % env
-    
     env.current_path = "%(deploy_to)s/current" % env
     env.shared_path = "%(deploy_to)s/shared" % env
 
@@ -55,9 +48,13 @@ def setup():
 def deploy():
     try: 
         "Build the project and deploy it to a specified environment"
+        
+        env.release_name = datetime.utcnow().strftime(env.release_format)
+        env.current_release = "%(releases_path)s/%(release_name)s" % env
+        
         helpers.setup()
         git.checkout_code()
-        copy_settings_files()
+        copy_settings_file("%(branch)s.py" % env)
         helpers.symlink_current()
         helpers.symlink_tmp()
         helpers.symlink_logs()
@@ -66,11 +63,11 @@ def deploy():
         helpers.rollback()
 
 def update():
-    # try:
-    git.update_code()
-    # except Exception, e:
-        # logging.exception(e)
-        # helpers.rollback()
+    try:
+        git.update_code()
+    except Exception, e:
+        logging.exception(e)
+        helpers.rollback()
 
 def start():
     helpers.check_minimum_requirements()
@@ -92,10 +89,15 @@ def restart():
     start()
 
 def test():
-    sudo("python %(current_release)s/%(project)s/manage.py test --settings=environments.live.testing --failfast" % env, user=env.sudo_user)
+    if 'current_release' in env:
+        app_path = "%(current_release)s/%(project)s" % env
+    else:
+        app_path = "%(current_path)s/%(project)s" % env
+    copy_settings_file("testing.py")
+    sudo("python %s/manage.py test --settings=environments.live.testing --failfast" % (app_path,), user=env.sudo_user)
 
 
-def copy_settings_files():
+def copy_settings_file(file_name):
     # def remove_settings_files_rollback():
     #     sudo("rm -rf %(current_path)s/%(project)s/environments/live/%(branch)s.py" % env, user=env.sudo_user)
     #     sudo("rm -rf %(current_path)s/%(project)s/environments/live/testing.py" % env, user=env.sudo_user)
@@ -103,25 +105,20 @@ def copy_settings_files():
     helpers.check_minimum_requirements()
     run("mkdir -p ~/fabrictmp")
     put(
-        "~/Documents/Repositories/txtalert/environments/live/%(branch)s.py" % env,
-        "~/fabrictmp/%(branch)s.py" % env
+        "~/Documents/Repositories/txtalert/environments/live/%s" % file_name,
+        "~/fabrictmp/%s" % file_name
     )
     sudo(
-        "cp ~/fabrictmp/%(branch)s.py "
-        "%(current_path)s/%(project)s/environments/live/%(branch)s.py" % env, 
+        "cp ~/fabrictmp/%s "
+        "%s/%s/environments/live/%s" % (
+            file_name,
+            env.current_path,
+            env.project,
+            file_name
+        ), 
         user=env.sudo_user
     )
-    put(
-        "~/Documents/Repositories/txtalert/environments/live/testing.py",
-        "~/fabrictmp/testing.py"
-    )
-    sudo(
-        "cp ~/fabrictmp/testing.py "
-        "%(current_path)s/%(project)s/environments/live/testing.py" % env,
-        user=env.sudo_user
-    )
-    run("rm ~/fabrictmp/%(branch)s.py" % env)
-    run("rm ~/fabrictmp/testing.py" % env)
+    run("rm ~/fabrictmp/%s" % file_name)
     run("rmdir ~/fabrictmp")
 
 

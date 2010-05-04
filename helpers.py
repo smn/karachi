@@ -6,7 +6,7 @@ def check_minimum_requirements():
     """
     make sure we have the bare essentials needed for doing anything
     """
-    require("hosts", provided_by = ['test', 'development', 'production'])
+    require("hosts", provided_by = ['development', 'production'])
 
 
 # a list of callbacks to call when a rollback() is required. This is like a
